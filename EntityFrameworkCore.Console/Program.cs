@@ -42,6 +42,131 @@ using var context = new FootballLeagueDbContext();
 //await ListVsQueryable();
 #endregion
 
+#region Write Queries
+
+// Use Console.WriteLine(context.ChangeTracker.DebugView.LongView); to see pending changes
+// Inserting Data 
+/* INSERT INTO Coaches (cols) VALUES (values) */
+
+// Simple Insert
+//await InsertOneRecord();
+
+// Loop Insert
+//await InsertWithLoop();
+
+// Batch Insert
+//await InsertRange();
+
+// Update Operations
+//await UpdateWithTracking();
+//await UpdateNoTracking();
+
+// Delete Operations
+//await DeleteRecord();
+
+// Execute Delete
+//await ExecuteDelete();
+
+// Execute Update
+//await ExecuteUpdate();
+
+#endregion
+
+async Task ExecuteDelete()
+{
+    await context.Coaches.Where(q => q.Name == "Theodore Whitmore").ExecuteDeleteAsync();
+}
+async Task ExecuteUpdate()
+{
+    await context.Coaches.Where(q => q.Name == "Jose Mourinho").ExecuteUpdateAsync(set => set
+    .SetProperty(prop => prop.Name, "Pep Guardiola"));
+}
+async Task DeleteRecord()
+{
+    /* DELETE FROM Coaches WHERE Id = 1 */
+    var coach = await context.Coaches.FindAsync(10);
+    // context.Remove(coach);
+    context.Entry(coach).State = EntityState.Deleted;
+    await context.SaveChangesAsync();
+}
+
+async Task UpdateWithTracking()
+{
+    // Find uses tracking
+    var coach = await context.Coaches.FindAsync(9);
+    coach.Name = "Trevoir Williams";
+    await context.SaveChangesAsync();
+}
+
+async Task UpdateNoTracking()
+{
+    // We cannot use find with no tracking enabled, so we look for the FirstOrDefault()
+    var coach1 = await context.Coaches
+        .AsNoTracking()
+        .FirstOrDefaultAsync(q => q.Id == 10);
+    coach1.Name = "Testing No Tracking Behavior - Entity State Modified";
+
+    // We can either call the Update() method or change the Entity State manually
+    //context.Update(coach1);
+    context.Entry(coach1).State = EntityState.Modified;
+    await context.SaveChangesAsync();
+}
+async Task InsertOneRecord()
+{
+    var newCoach = new Coach
+    {
+        Name = "Jose Mourinho",
+        CreatedDate = DateTime.Now,
+    };
+    await context.Coaches.AddAsync(newCoach);
+    await context.SaveChangesAsync();
+}
+
+async Task InsertWithLoop()
+{
+    var newCoach = new Coach
+    {
+        Name = "Jose Mourinho",
+        CreatedDate = DateTime.Now,
+    };
+    var newCoach1 = new Coach
+    {
+        Name = "Theodore Whitmore",
+        CreatedDate = DateTime.Now,
+    };
+    List<Coach> coaches = new List<Coach>
+    {
+        newCoach1,
+        newCoach
+    };
+    foreach (var coach in coaches)
+    {
+        await context.Coaches.AddAsync(coach);
+    }
+    await context.SaveChangesAsync();
+}
+
+async Task InsertRange()
+{
+    var newCoach = new Coach
+    {
+        Name = "Jose Mourinho",
+        CreatedDate = DateTime.Now,
+    };
+    var newCoach1 = new Coach
+    {
+        Name = "Theodore Whitmore",
+        CreatedDate = DateTime.Now,
+    };
+    List<Coach> coaches = new List<Coach>
+    {
+        newCoach1,
+        newCoach
+    };
+    await context.Coaches.AddRangeAsync(coaches);
+    await context.SaveChangesAsync();
+}
+
 
 async Task ListVsQueryable()
 {
