@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace EntityFrameworkCore.Data.Migrations
 {
-    [DbContext(typeof(FootballLeageDbContext))]
+    [DbContext(typeof(FootballLeagueDbContext))]
     [Migration("20230831164046_InitialMigration")]
     partial class InitialMigration
     {
