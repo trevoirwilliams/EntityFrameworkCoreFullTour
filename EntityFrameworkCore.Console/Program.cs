@@ -8,6 +8,7 @@ using var context = new FootballLeagueDbContext();
 // For SQLite Users to see where the Database file gets created
 //Console.WriteLine(context.DbPath);
 
+#region Read Queries
 // Select all teams
 // await GetAllTeams();
 //await GetAllTeamsQuerySyntax();
@@ -38,44 +39,53 @@ using var context = new FootballLeagueDbContext();
 //await NoTracking();
 
 //IQueryables vs List Types
-Console.WriteLine("Enter '1' for Team with Id 1 or '2' for teams that contain 'F.C.'");
-var option = Convert.ToInt32(Console.ReadLine());
-List<Team> teamsAsList = new List<Team>();
+//await ListVsQueryable();
+#endregion
 
-// After executing to ToListAsync, the records are loaded into memory. Any operation is then done in memory
-teamsAsList = await context.Teams.ToListAsync();
-if(option == 1)
+
+async Task ListVsQueryable()
 {
-    teamsAsList = teamsAsList.Where(q => q.TeamId == 1).ToList();
-}
-else if(option == 2)
-{
-    teamsAsList = teamsAsList.Where(q => q.Name.Contains("F.C.")).ToList();
+    Console.WriteLine("Enter '1' for Team with Id 1 or '2' for teams that contain 'F.C.'");
+    var option = Convert.ToInt32(Console.ReadLine());
+    List<Team> teamsAsList = new List<Team>();
+
+    // After executing to ToListAsync, the records are loaded into memory. Any operation is then done in memory
+    teamsAsList = await context.Teams.ToListAsync();
+    if (option == 1)
+    {
+        teamsAsList = teamsAsList.Where(q => q.TeamId == 1).ToList();
+    }
+    else if (option == 2)
+    {
+        teamsAsList = teamsAsList.Where(q => q.Name.Contains("F.C.")).ToList();
+    }
+
+    foreach (var t in teamsAsList)
+    {
+        Console.WriteLine(t.Name);
+    }
+
+    // Records stay as IQueryable until the ToListAsync is executed, then the final query is performed. 
+    var teamsAsQueryable = context.Teams.AsQueryable();
+    if (option == 1)
+    {
+        teamsAsQueryable = teamsAsQueryable.Where(team => team.TeamId == 1);
+    }
+
+    if (option == 2)
+    {
+        teamsAsQueryable = teamsAsQueryable.Where(team => team.Name.Contains("F.C."));
+    }
+
+    // Actual Query execution
+    teamsAsList = await teamsAsQueryable.ToListAsync();
+    foreach (var t in teamsAsList)
+    {
+        Console.WriteLine(t.Name);
+    }
+
 }
 
-foreach (var t in teamsAsList)
-{
-    Console.WriteLine(t.Name);
-}
-
-// Records stay as IQueryable until the ToListAsync is executed, then the final query is performed. 
-var teamsAsQueryable = context.Teams.AsQueryable();
-if (option == 1)
-{
-    teamsAsQueryable = teamsAsQueryable.Where(team => team.TeamId == 1);
-}
-
-if (option == 2)
-{
-    teamsAsQueryable = teamsAsQueryable.Where(team => team.Name.Contains("F.C."));
-}
-
-// Actual Query execution
-teamsAsList = await teamsAsQueryable.ToListAsync();
-foreach (var t in teamsAsList)
-{
-    Console.WriteLine(t.Name);
-}
 
 async Task NoTracking()
 {
