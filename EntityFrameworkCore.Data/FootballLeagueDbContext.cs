@@ -1,6 +1,8 @@
-﻿using EntityFrameworkCore.Domain;
+﻿using EntityFrameworkCore.Data.Configurations;
+using EntityFrameworkCore.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace EntityFrameworkCore.Data
 {
@@ -10,10 +12,12 @@ namespace EntityFrameworkCore.Data
         {
             var folder = Environment.SpecialFolder.LocalApplicationData;
             var path = Environment.GetFolderPath(folder);
-            DbPath = Path.Combine(path, "FootballLeage_EfCore.db");
+            DbPath = Path.Combine(path, "FootballLeague_EfCore.db");
         }
         public DbSet<Team> Teams { get; set; }
         public DbSet<Coach> Coaches { get; set; }
+        public DbSet<League> Leagues { get; set; }
+        public DbSet<Match> Matches { get; set; }
         public string DbPath { get; private set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -30,27 +34,7 @@ namespace EntityFrameworkCore.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Team>().HasData(
-                    new Team
-                    {
-                        TeamId = 1,
-                        Name = "Tivoli Gardens F.C.",
-                        CreatedDate = DateTimeOffset.UtcNow.DateTime
-                    },
-                    new Team
-                    {
-                        TeamId = 2,
-                        Name = "Waterhouse F.C.",
-                        CreatedDate = DateTimeOffset.UtcNow.DateTime
-                    },
-                    new Team
-                    {
-                        TeamId = 3,
-                        Name = "Humble Lions F.C.",
-                        CreatedDate = DateTimeOffset.UtcNow.DateTime
-                    }
-
-                );
+            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         }
     }
 }
