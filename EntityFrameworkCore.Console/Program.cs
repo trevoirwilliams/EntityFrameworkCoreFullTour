@@ -1,6 +1,8 @@
 ﻿using EntityFrameworkCore.Data;
+using EntityFrameworkCore.Data.ScaffoldContext;
 using EntityFrameworkCore.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 // First we need an instance of context
 using var context = new FootballLeagueDbContext();
@@ -76,6 +78,248 @@ using var context = new FootballLeagueDbContext();
 
 #endregion
 
+#region Related Data
+// Insert record with FK
+//await InsertMatch();
+
+// Insert Parent/Child
+//await InsertTeamWithCoach();
+
+// Insert Parent with Children
+//await InsertLeagueWithTeams();
+
+// Eager Loading Data
+//await EagerLoadingData();
+
+// Explicit Loading Data
+//await ExplicitLoadingData();
+
+// Lazy Loading
+//await LazyLoadingData();
+
+// Filtering Includes
+// Get all teams and only home matches where they have scored
+//await FilteringIncludes();
+
+// Projects and Anonymous types
+//await AnonymousTypesAndRelatedData();
+
+#endregion
+
+async Task AnonymousTypesAndRelatedData()
+{
+    var teams = await context.Teams
+    .Select(q => new TeamDetails
+     {
+         TeamId = q.Id,
+         TeamName = q.Name,
+         CoachName = q.Coach.Name,
+         TotalHomeGoals = q.HomeMatches.Sum(x => x.HomeTeamScore),
+         TotalAwayGoals = q.AwayMatches.Sum(x => x.AwayTeamScore),
+     })
+    .ToListAsync();
+
+foreach (var team in teams)
+{
+        Console.WriteLine($"{team.TeamName} - {team.CoachName} | Home Goals: {team.TotalHomeGoals} | Away Goals: {team.TotalAwayGoals}");
+    }
+
+}
+async Task FilteringIncludes()
+{
+    //await InsertMoreMatches();
+    var teams = await context.Teams
+        .Include("Coach")
+        .Include(q => q.HomeMatches.Where(q => q.HomeTeamScore > 0))
+        .ToListAsync();
+
+    foreach (var team in teams)
+    {
+        Console.WriteLine($"{team.Name} - {team.Coach.Name}");
+        foreach (var match in team.HomeMatches)
+        {
+            Console.WriteLine($"Score - {match.HomeTeamScore}");
+        }
+    }
+}
+
+async Task ExplicitLoadingData()
+{
+    var league = await context.FindAsync<League>(1);
+    if (!league.Teams.Any())
+    {
+        Console.WriteLine("Teams have not been loaded");
+    }
+
+    await context.Entry(league)
+        .Collection(q => q.Teams)
+        .LoadAsync();
+
+    if (league.Teams.Any())
+    {
+        foreach (var team in league.Teams)
+        {
+            Console.WriteLine($"{team.Name}");
+        }
+    }
+}
+
+async Task LazyLoadingData()
+{
+    var league = await context.FindAsync<League>(1);
+    foreach (var team in league.Teams)
+    {
+        Console.WriteLine($"{team.Name}");
+    }
+
+    // Example of N+1 Problem
+    //foreach (var league in context.Leagues)
+    //{
+    //    foreach (var team in league.Teams)
+    //    {
+    //        Console.WriteLine($"{team.Name} - {team.Coach.Name}");
+    //    }
+    //}
+
+}
+async Task EagerLoadingData()
+{
+    var leagues = await context.Leagues
+        //.Include("Teams") // You can also use the name of the property
+        .Include(q => q.Teams)
+            .ThenInclude(q => q.Coach) // Use for tables realted to the related table
+        .ToListAsync();
+
+    foreach (var league in leagues)
+    {
+        Console.WriteLine($"League - {league.Name}");
+        foreach (var team in league.Teams)
+        {
+            Console.WriteLine($"{team.Name} - {team.Coach.Name}");
+        }
+    }
+}
+async Task InsertMatch()
+{
+    var match = new Match
+    {
+        AwayTeamId = 1,
+        HomeTeamId = 2,
+        HomeTeamScore = 0,
+        AwayTeamScore = 0,
+        Date = new DateTime(2023, 10, 1),
+        TicketPrice = 20,
+    };
+
+    await context.AddAsync(match);
+    await context.SaveChangesAsync();
+
+    /* Incorrect reference data  - Will give error*/
+    var match1 = new Match
+    {
+        AwayTeamId = 0,
+        HomeTeamId = 0,
+        HomeTeamScore = 0,
+        AwayTeamScore = 0,
+        Date = new DateTime(2023, 10, 1),
+        TicketPrice = 20,
+    };
+
+    await context.AddAsync(match1);
+    await context.SaveChangesAsync();
+}
+async Task InsertMoreMatches()
+{
+    var match1 = new Match
+    {
+        AwayTeamId = 2,
+        HomeTeamId = 3,
+        HomeTeamScore = 1,
+        AwayTeamScore = 0,
+        Date = new DateTime(2023, 01, 1),
+        TicketPrice = 20,
+    };
+    var match2 = new Match
+    {
+        AwayTeamId = 2,
+        HomeTeamId = 1,
+        HomeTeamScore = 1,
+        AwayTeamScore = 0,
+        Date = new DateTime(2023, 01, 1),
+        TicketPrice = 20,
+    };
+    var match3 = new Match
+    {
+        AwayTeamId = 1,
+        HomeTeamId = 3,
+        HomeTeamScore = 1,
+        AwayTeamScore = 0,
+        Date = new DateTime(2023, 01, 1),
+        TicketPrice = 20,
+    };
+    var match4 = new Match
+    {
+        AwayTeamId = 4,
+        HomeTeamId = 3,
+        HomeTeamScore = 0,
+        AwayTeamScore = 1,
+        Date = new DateTime(2023, 01, 1),
+        TicketPrice = 20,
+    };
+    await context.AddRangeAsync(match1,match2,match3,match4);
+    await context.SaveChangesAsync();
+}
+
+async Task InsertTeamWithCoach()
+{
+    var team = new Team
+    {
+        Name = "New Team",
+        Coach = new Coach
+        {
+            Name = "Johnson"
+        },
+    };
+    await context.AddAsync(team);
+    await context.SaveChangesAsync();
+}
+
+async Task InsertLeagueWithTeams()
+{
+    var league = new League
+    {
+        Name = "Serie A",
+        Teams = new List<Team>
+                {
+                    new Team
+                    {
+                        Name = "Juventus",
+                        Coach = new Coach
+                        {
+                            Name = "Juve Coach"
+                        },
+                    },
+                    new Team
+                    {
+                        Name = "AC Milan",
+                        Coach = new Coach
+                        {
+                            Name = "Milan Coach"
+                        },
+                    },
+                    new Team
+                    {
+                        Name = "AS Roma",
+                        Coach = new Coach
+                        {
+                            Name = "Roma Coach"
+                        },
+                    }
+                }
+    };
+    await context.AddAsync(league);
+    await context.SaveChangesAsync();
+}
 async Task ExecuteDelete()
 {
     await context.Coaches.Where(q => q.Name == "Theodore Whitmore").ExecuteDeleteAsync();
@@ -447,3 +691,12 @@ class TeamInfo
     public string Name { get; set; }
 }
 
+class TeamDetails
+{
+    public int TeamId { get; set; }
+    public string TeamName { get; set; }
+    public string CoachName { get; set; }
+
+    public int TotalHomeGoals { get; set; }
+    public int TotalAwayGoals { get; set; }
+}

@@ -26,6 +26,7 @@ namespace EntityFrameworkCore.Data
             //optionsBuilder.UseSqlServer("Data Source=(localdb)\\MSSQLLocalDB; Initial Catalog=FootballLeage_EfCore; Encrypt=False");
 
             optionsBuilder.UseSqlite($"Data Source={DbPath}")
+                .UseLazyLoadingProxies()
                 //.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
                 .LogTo(Console.WriteLine, LogLevel.Information)
                 .EnableSensitiveDataLogging()//OK in testing a project, but be careful about enabling this in production.
