@@ -18,6 +18,7 @@ namespace EntityFrameworkCore.Data
         public DbSet<Coach> Coaches { get; set; }
         public DbSet<League> Leagues { get; set; }
         public DbSet<Match> Matches { get; set; }
+        public DbSet<TeamsAndLeaguesView> TeamsAndLeaguesView { get; set; }
         public string DbPath { get; private set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -26,7 +27,7 @@ namespace EntityFrameworkCore.Data
             //optionsBuilder.UseSqlServer("Data Source=(localdb)\\MSSQLLocalDB; Initial Catalog=FootballLeage_EfCore; Encrypt=False");
 
             optionsBuilder.UseSqlite($"Data Source={DbPath}")
-                .UseLazyLoadingProxies()
+                //.UseLazyLoadingProxies()
                 //.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
                 .LogTo(Console.WriteLine, LogLevel.Information)
                 .EnableSensitiveDataLogging()//OK in testing a project, but be careful about enabling this in production.
@@ -36,6 +37,10 @@ namespace EntityFrameworkCore.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+            modelBuilder.Entity<TeamsAndLeaguesView>().HasNoKey().ToView("vw_TeamsAndLeagues");
+            modelBuilder.HasDbFunction(typeof(FootballLeagueDbContext).GetMethod(nameof(GetEarliestTeamMatch), new[] { typeof(int) })).HasName("fn_GetEarliestMatch");
         }
+
+        public DateTime GetEarliestTeamMatch(int teamId) => throw new NotImplementedException();
     }
 }

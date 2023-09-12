@@ -1,8 +1,8 @@
 ﻿using EntityFrameworkCore.Data;
-using EntityFrameworkCore.Data.ScaffoldContext;
 using EntityFrameworkCore.Domain;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 
 // First we need an instance of context
 using var context = new FootballLeagueDbContext();
@@ -106,21 +106,89 @@ using var context = new FootballLeagueDbContext();
 
 #endregion
 
+#region Raw SQL
+
+// Querying a Keyless Entity
+//await QueryingKeylessEntityOrView();
+
+// FromSqlRaw()
+Console.WriteLine("Enter Team Name: ");
+var teamName = Console.ReadLine();
+var teamNameParam = new SqliteParameter("teamName", teamName);
+var teams = context.Teams.FromSqlRaw($"SELECT * FROM Teams WHERE name = @teamName", teamNameParam);
+foreach (var t in teams)
+{
+    Console.WriteLine(t);
+}
+
+// FromSql()
+teams = context.Teams.FromSql($"SELECT * FROM Teams WHERE name = {teamName}");
+foreach (var t in teams)
+{
+    Console.WriteLine(t);
+}
+
+// FromSqlInterpolated
+teams = context.Teams.FromSqlInterpolated($"SELECT * FROM Teams WHERE name = {teamName}");
+foreach (var t in teams)
+{
+    Console.WriteLine(t);
+}
+
+// Mixing with LINQ
+
+var teamsList = context.Teams.FromSql($"SELECT * FROM Teams")
+    .Where(q => q.Id == 1)
+    .OrderBy(q => q.Id)
+    .Include("League")
+    .ToList();
+
+foreach (var t in teamsList)
+{
+    Console.WriteLine(t);
+}
+
+// Executing Stored Procedures
+var leagueId = 1;
+var league = context.Leagues
+    .FromSqlInterpolated($"EXEC dbo.StoredProcedureToGetLeagueNameHere {leagueId}");
+
+// Non-querying statement 
+var someName = "Random Team Name";
+context.Database.ExecuteSql($"UPDATE Teams SET Name = {someName}");
+
+// Query Scalar or Non-Entity Type
+var leagueIds = context.Database.SqlQuery<int>($"SELECT Id FROM Leagues")
+    .ToList();
+
+// Execute User-Defined Query
+var earliestMatch = context.GetEarliestTeamMatch(1);
+#endregion
+
+async Task QueryingKeylessEntityOrView()
+{
+    var teams = await context.TeamsAndLeaguesView.ToListAsync();
+    foreach (var team in teams)
+    {
+        Console.WriteLine($"{team.Name} - {team.LeagueName}");
+    }
+}
+
 async Task AnonymousTypesAndRelatedData()
 {
     var teams = await context.Teams
     .Select(q => new TeamDetails
-     {
-         TeamId = q.Id,
-         TeamName = q.Name,
-         CoachName = q.Coach.Name,
-         TotalHomeGoals = q.HomeMatches.Sum(x => x.HomeTeamScore),
-         TotalAwayGoals = q.AwayMatches.Sum(x => x.AwayTeamScore),
-     })
+    {
+        TeamId = q.Id,
+        TeamName = q.Name,
+        CoachName = q.Coach.Name,
+        TotalHomeGoals = q.HomeMatches.Sum(x => x.HomeTeamScore),
+        TotalAwayGoals = q.AwayMatches.Sum(x => x.AwayTeamScore),
+    })
     .ToListAsync();
 
-foreach (var team in teams)
-{
+    foreach (var team in teams)
+    {
         Console.WriteLine($"{team.TeamName} - {team.CoachName} | Home Goals: {team.TotalHomeGoals} | Away Goals: {team.TotalAwayGoals}");
     }
 
@@ -266,7 +334,7 @@ async Task InsertMoreMatches()
         Date = new DateTime(2023, 01, 1),
         TicketPrice = 20,
     };
-    await context.AddRangeAsync(match1,match2,match3,match4);
+    await context.AddRangeAsync(match1, match2, match3, match4);
     await context.SaveChangesAsync();
 }
 
