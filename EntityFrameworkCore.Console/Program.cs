@@ -119,16 +119,7 @@ using var context = new FootballLeagueDbContext();
 //RawSqlWithLinq();
 
 // Executing Stored Procedures
-var leagueId = 1;
-var league = context.Leagues
-    .FromSqlInterpolated($"EXEC dbo.StoredProcedureToGetLeagueNameHere {leagueId}");
-
-// Non-querying statement 
-var someNewTeamName = "New Team Name Here";
-var success = context.Database.ExecuteSqlInterpolated($"UPDATE Teams SET Name = {someNewTeamName}");
-
-var teamToDeleteId = 1;
-var teamDeletedSuccess = context.Database.ExecuteSqlInterpolated($"EXEC dbo.DeleteTeam {teamToDeleteId}");
+//OtherRawQueries();
 
 
 #endregion
