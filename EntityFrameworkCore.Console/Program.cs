@@ -111,60 +111,76 @@ using var context = new FootballLeagueDbContext();
 // Querying a Keyless Entity
 //await QueryingKeylessEntityOrView();
 
-// FromSqlRaw()
-Console.WriteLine("Enter Team Name: ");
-var teamName = Console.ReadLine();
-var teamNameParam = new SqliteParameter("teamName", teamName);
-var teams = context.Teams.FromSqlRaw($"SELECT * FROM Teams WHERE name = @teamName", teamNameParam);
-foreach (var t in teams)
-{
-    Console.WriteLine(t);
-}
+// Executing Raw SQL Safely
+//ExecutingRawSql();
 
-// FromSql()
-teams = context.Teams.FromSql($"SELECT * FROM Teams WHERE name = {teamName}");
-foreach (var t in teams)
-{
-    Console.WriteLine(t);
-}
-
-// FromSqlInterpolated
-teams = context.Teams.FromSqlInterpolated($"SELECT * FROM Teams WHERE name = {teamName}");
-foreach (var t in teams)
-{
-    Console.WriteLine(t);
-}
 
 // Mixing with LINQ
+//RawSqlWithLinq();
 
-var teamsList = context.Teams.FromSql($"SELECT * FROM Teams")
+// Querying Stored Procedures, Functions and non-Entity Types
+//OtherRawQueries();
+#endregion
+
+void OtherRawQueries()
+{
+    // Executing Stored Procedures
+    var leagueId = 1;
+    var league = context.Leagues
+        .FromSqlInterpolated($"EXEC dbo.StoredProcedureToGetLeagueNameHere {leagueId}");
+
+    // Non-querying statement 
+    var someName = "Random Team Name";
+    context.Database.ExecuteSql($"UPDATE Teams SET Name = {someName}");
+
+    // Query Scalar or Non-Entity Type
+    var leagueIds = context.Database.SqlQuery<int>($"SELECT Id FROM Leagues")
+        .ToList();
+
+    // Execute User-Defined Query
+    var earliestMatch = context.GetEarliestTeamMatch(1);
+}
+
+void RawSqlWithLinq()
+{
+    var teamsList = context.Teams.FromSql($"SELECT * FROM Teams")
     .Where(q => q.Id == 1)
     .OrderBy(q => q.Id)
     .Include("League")
     .ToList();
 
-foreach (var t in teamsList)
-{
-    Console.WriteLine(t);
+    foreach (var t in teamsList)
+    {
+        Console.WriteLine(t);
+    }
 }
 
-// Executing Stored Procedures
-var leagueId = 1;
-var league = context.Leagues
-    .FromSqlInterpolated($"EXEC dbo.StoredProcedureToGetLeagueNameHere {leagueId}");
+void ExecutingRawSql()
+{
+    // FromSqlRaw()
+    Console.WriteLine("Enter Team Name: ");
+    var teamName = Console.ReadLine();
+    var teamNameParam = new SqliteParameter("teamName", teamName);
+    var teams = context.Teams.FromSqlRaw($"SELECT * FROM Teams WHERE name = @teamName", teamNameParam);
+    foreach (var t in teams)
+    {
+        Console.WriteLine(t);
+    }
 
-// Non-querying statement 
-var someName = "Random Team Name";
-context.Database.ExecuteSql($"UPDATE Teams SET Name = {someName}");
+    // FromSql()
+    teams = context.Teams.FromSql($"SELECT * FROM Teams WHERE name = {teamName}");
+    foreach (var t in teams)
+    {
+        Console.WriteLine(t);
+    }
 
-// Query Scalar or Non-Entity Type
-var leagueIds = context.Database.SqlQuery<int>($"SELECT Id FROM Leagues")
-    .ToList();
-
-// Execute User-Defined Query
-var earliestMatch = context.GetEarliestTeamMatch(1);
-#endregion
-
+    // FromSqlInterpolated
+    teams = context.Teams.FromSqlInterpolated($"SELECT * FROM Teams WHERE name = {teamName}");
+    foreach (var t in teams)
+    {
+        Console.WriteLine(t);
+    }
+}
 async Task QueryingKeylessEntityOrView()
 {
     var teams = await context.TeamsAndLeaguesView.ToListAsync();
