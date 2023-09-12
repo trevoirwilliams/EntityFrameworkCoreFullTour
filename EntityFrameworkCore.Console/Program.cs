@@ -118,8 +118,19 @@ using var context = new FootballLeagueDbContext();
 // Mixing with LINQ
 //RawSqlWithLinq();
 
-// Querying Stored Procedures, Functions and non-Entity Types
-//OtherRawQueries();
+// Executing Stored Procedures
+var leagueId = 1;
+var league = context.Leagues
+    .FromSqlInterpolated($"EXEC dbo.StoredProcedureToGetLeagueNameHere {leagueId}");
+
+// Non-querying statement 
+var someNewTeamName = "New Team Name Here";
+var success = context.Database.ExecuteSqlInterpolated($"UPDATE Teams SET Name = {someNewTeamName}");
+
+var teamToDeleteId = 1;
+var teamDeletedSuccess = context.Database.ExecuteSqlInterpolated($"EXEC dbo.DeleteTeam {teamToDeleteId}");
+
+
 #endregion
 
 void OtherRawQueries()
@@ -131,7 +142,10 @@ void OtherRawQueries()
 
     // Non-querying statement 
     var someName = "Random Team Name";
-    context.Database.ExecuteSql($"UPDATE Teams SET Name = {someName}");
+    context.Database.ExecuteSqlInterpolated($"UPDATE Teams SET Name = {someName}");
+
+    int matchId = 1;
+    context.Database.ExecuteSqlInterpolated($"EXEC dbo.DeleteMatch {matchId}");
 
     // Query Scalar or Non-Entity Type
     var leagueIds = context.Database.SqlQuery<int>($"SELECT Id FROM Leagues")
