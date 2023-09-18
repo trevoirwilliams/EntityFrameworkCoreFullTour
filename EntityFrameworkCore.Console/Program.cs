@@ -5,7 +5,8 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 // First we need an instance of context
-using var context = new FootballLeagueDbContext();
+DbContextOptions<FootballLeagueDbContext> options = new DbContextOptions<FootballLeagueDbContext>();
+using var context = new FootballLeagueDbContext(options);
 
 // Use to automatically apply all outstanding migrations
 // Carefully consider before using this approach in production.

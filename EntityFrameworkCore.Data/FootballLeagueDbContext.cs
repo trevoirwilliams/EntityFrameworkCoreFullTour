@@ -1,6 +1,7 @@
-﻿using EntityFrameworkCore.Data.Configurations;
-using EntityFrameworkCore.Domain;
+﻿using EntityFrameworkCore.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
 
@@ -8,11 +9,9 @@ namespace EntityFrameworkCore.Data
 {
     public class FootballLeagueDbContext : DbContext
     {
-        public FootballLeagueDbContext()
+        public FootballLeagueDbContext(DbContextOptions<FootballLeagueDbContext> options) : base(options)
         {
-            var folder = Environment.SpecialFolder.LocalApplicationData;
-            var path = Environment.GetFolderPath(folder);
-            DbPath = Path.Combine(path, "FootballLeague_EfCore.db");
+
         }
         public DbSet<Team> Teams { get; set; }
         public DbSet<Coach> Coaches { get; set; }
@@ -20,19 +19,6 @@ namespace EntityFrameworkCore.Data
         public DbSet<Match> Matches { get; set; }
         public DbSet<TeamsAndLeaguesView> TeamsAndLeaguesView { get; set; }
         public string DbPath { get; private set; }
-
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            // Using SQL Server
-            //optionsBuilder.UseSqlServer("Data Source=(localdb)\\MSSQLLocalDB; Initial Catalog=FootballLeage_EfCore; Encrypt=False");
-
-            optionsBuilder.UseSqlite($"Data Source={DbPath}")
-                //.UseLazyLoadingProxies()
-                //.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
-                .LogTo(Console.WriteLine, LogLevel.Information)
-                .EnableSensitiveDataLogging()//OK in testing a project, but be careful about enabling this in production.
-                .EnableDetailedErrors();
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -42,5 +28,26 @@ namespace EntityFrameworkCore.Data
         }
 
         public DateTime GetEarliestTeamMatch(int teamId) => throw new NotImplementedException();
+    }
+
+    public class FootballLeagueDbContextFactory : IDesignTimeDbContextFactory<FootballLeagueDbContext>
+    {
+        public FootballLeagueDbContext CreateDbContext(string[] args)
+        {
+            var folder = Environment.SpecialFolder.LocalApplicationData;
+            var path = Environment.GetFolderPath(folder);
+
+            IConfigurationRoot configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json")
+                .Build();
+
+            var dbPath = Path.Combine(path, configuration.GetConnectionString("SqliteDatabaseConnectionString"));
+
+            var optionsBuilder = new DbContextOptionsBuilder<FootballLeagueDbContext>();
+            optionsBuilder.UseSqlite($"Data Source={dbPath}");
+
+            return new FootballLeagueDbContext(optionsBuilder.Options);
+        }
     }
 }
