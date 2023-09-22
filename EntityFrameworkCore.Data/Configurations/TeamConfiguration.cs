@@ -14,7 +14,23 @@ namespace EntityFrameworkCore.Data.Configurations
     {
         public void Configure(EntityTypeBuilder<Team> builder)
         {
-            builder.HasIndex(q => q.Name).IsUnique();
+            builder.HasIndex(q => q.Name)
+                .IsUnique();
+
+            // Composite Key Configuration
+            //builder.HasIndex(q => new { q.CoachId, q.LeagueId }).IsUnique();
+
+            // For SQL Server Only
+            //builder.Property(q => q.Version)
+            //    .IsRowVersion();
+
+            builder.Property(q => q.Version)
+                .IsConcurrencyToken();
+
+            builder.Property(q => q.Name).HasMaxLength(100).IsRequired();
+
+
+            builder.ToTable("Teams", b => b.IsTemporal());
 
             builder.HasMany(m => m.HomeMatches)
                 .WithOne(q => q.HomeTeam)

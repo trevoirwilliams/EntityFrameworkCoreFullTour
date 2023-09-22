@@ -27,6 +27,33 @@ namespace EntityFrameworkCore.Data
             modelBuilder.HasDbFunction(typeof(FootballLeagueDbContext).GetMethod(nameof(GetEarliestTeamMatch), new[] { typeof(int) })).HasName("fn_GetEarliestMatch");
         }
 
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+        {
+            configurationBuilder.Properties<string>().HaveMaxLength(100);
+            configurationBuilder.Properties<decimal>().HavePrecision(16, 2);
+        }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            var entries = ChangeTracker.Entries<BaseDomainModel>().Where(q => q.State == EntityState.Modified || q.State == EntityState.Added);
+
+            foreach (var entry in entries)
+            {
+                entry.Entity.ModifiedDate = DateTime.UtcNow;
+                entry.Entity.ModifiedBy = "Sample User 1";
+
+                if(entry.State == EntityState.Added)
+                {
+                    entry.Entity.CreatedDate = DateTime.UtcNow;
+                    entry.Entity.CreatedBy = "Sample User";
+                }
+
+                entry.Entity.Version = Guid.NewGuid();
+            }
+
+            return base.SaveChangesAsync(cancellationToken);
+        }
+
         public DateTime GetEarliestTeamMatch(int teamId) => throw new NotImplementedException();
     }
 
@@ -39,7 +66,7 @@ namespace EntityFrameworkCore.Data
 
             IConfigurationRoot configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json")
+                .AddJsonFile("appsettings.json", optional: true)
                 .Build();
 
             var dbPath = Path.Combine(path, configuration.GetConnectionString("SqliteDatabaseConnectionString"));

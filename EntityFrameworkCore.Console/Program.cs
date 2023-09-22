@@ -1,12 +1,19 @@
-﻿using EntityFrameworkCore.Data;
+﻿using Castle.Core.Resource;
+using EntityFrameworkCore.Data;
 using EntityFrameworkCore.Domain;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 // First we need an instance of context
-DbContextOptions<FootballLeagueDbContext> options = new DbContextOptions<FootballLeagueDbContext>();
-using var context = new FootballLeagueDbContext(options);
+var folder = Environment.SpecialFolder.LocalApplicationData;
+var path = Environment.GetFolderPath(folder);
+var dbPath = Path.Combine(path, "FootballLeague_EfCore.db");
+var optionsBuilder = new DbContextOptionsBuilder<FootballLeagueDbContext>();
+optionsBuilder.UseSqlite($"Data Source={dbPath}");
+using var context = new FootballLeagueDbContext(optionsBuilder.Options);
+
+using var sqlServerContext = new FootballLeagueSqlServerDbContext();
 
 // Use to automatically apply all outstanding migrations
 // Carefully consider before using this approach in production.
@@ -57,6 +64,7 @@ using var context = new FootballLeagueDbContext(options);
 
 // Simple Insert
 //await InsertOneRecord();
+//await InsertOneRecordWithAudit();
 
 // Loop Insert
 //await InsertWithLoop();
@@ -124,6 +132,129 @@ using var context = new FootballLeagueDbContext(options);
 
 
 #endregion
+
+# region Additional Queries
+//TemporalTableQuery();
+
+//TransactionSupport();
+
+// Concurrency Checks
+//await ConcurrencyChecks();
+
+// Global Query Filters
+//GlobalQueryFilters();
+
+#endregion
+
+void GlobalQueryFilters()
+{
+    var leagues = context.Leagues.ToList();
+    Console.WriteLine("List all leagues");
+    foreach (var l in leagues)
+    {
+        Console.WriteLine(l.Name);
+    }
+    var league = context.Leagues.Find(1);
+    league.IsDeleted = true;
+    Console.WriteLine("Soft Delete league with the id 1");
+    context.SaveChanges();
+
+    Console.WriteLine("List all leagues - global filter ignores 'deleted' record");
+    leagues = context.Leagues.ToList();
+    foreach (var l in leagues)
+    {
+        Console.WriteLine(l.Name);
+    }
+
+    Console.WriteLine("List all leagues - global filter is ignored in the query");
+    leagues = context.Leagues
+        .IgnoreQueryFilters()
+        .ToList();
+    foreach (var l in leagues)
+    {
+        Console.WriteLine(l.Name);
+    }
+}
+
+async Task ConcurrencyChecks()
+{
+    var team = context.Teams.Find(1);
+    team.Name = "New Team With Concurrency Check 1";
+
+    try
+    {
+        await context.SaveChangesAsync();
+    }
+    catch (DbUpdateConcurrencyException ex)
+    {
+        Console.WriteLine(ex.Message);
+        //throw;
+    }
+}
+void TransactionSupport()
+{
+    var transaction = context.Database.BeginTransaction();
+    var league = new League
+    {
+        Name = "Testing Transactions"
+    };
+
+    context.Add(league);
+    context.SaveChanges();
+    transaction.CreateSavepoint("CreatedLeague");
+
+    var coach = new Coach
+    {
+        Name = "Transaction Coach"
+    };
+
+    context.Add(coach);
+    context.SaveChanges();
+
+    var teams = new List<Team>
+{
+    new Team
+    {
+        Name = "Transaction Team 1",
+        LeagueId = league.Id,
+        CoachId = coach.Id
+    }
+};
+    context.AddRange(teams);
+    context.SaveChanges();
+
+    try
+    {
+        transaction.Commit();
+    }
+    catch (Exception)
+    {
+        // Roll back entire operation
+        //transaction.Rollback();
+
+        // Rollback to specific point 
+        transaction.RollbackToSavepoint("CreatedLeague");
+        throw;
+    }
+}
+void TemporalTableQuery()
+{
+    var teamHistory = sqlServerContext.Teams
+        .TemporalAll()
+        .Where(q => q.Id == 1)
+        .Select(team => new
+        {
+            team.Name,
+            ValueFrom = EF.Property<DateTime>(team, "PeriodStart"),
+            ValueTo = EF.Property<DateTime>(team, "PeriodEnd"),
+        })
+        .ToList();
+
+    foreach (var record in teamHistory)
+    {
+        Console.WriteLine($"{record.Name} | From {record.ValueFrom} | To {record.ValueTo}");
+    }
+}
 
 void OtherRawQueries()
 {
@@ -459,7 +590,15 @@ async Task InsertOneRecord()
     await context.Coaches.AddAsync(newCoach);
     await context.SaveChangesAsync();
 }
-
+async Task InsertOneRecordWithAudit()
+{
+    var newLeague = new League
+    {
+        Name = "New League With Audit"
+    };
+    await context.AddAsync(newLeague);
+    await context.SaveChangesAsync();
+}
 async Task InsertWithLoop()
 {
     var newCoach = new Coach

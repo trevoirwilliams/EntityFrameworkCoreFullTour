@@ -1,4 +1,6 @@
-﻿namespace EntityFrameworkCore.Domain;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace EntityFrameworkCore.Domain;
 
 public class Match : BaseDomainModel
 {
